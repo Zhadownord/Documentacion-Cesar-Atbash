@@ -187,7 +187,6 @@
     <p class="lede">Cifra y descifra mensajes con los métodos César y Atbash sobre un alfabeto que tú defines. El descifrado no pide el método: lo determina solo, mediante análisis de frecuencias — la técnica descrita por primera vez por al-Kindi en el siglo IX.</p>
   </header>
 
-  <!-- CONFIGURACIÓN DE ALFABETO -->
   <div class="card">
     <h2><span class="n">1</span> Conjunto de caracteres (alfabeto de trabajo)</h2>
     <p class="sub">Este es el conjunto ordenado sobre el que se calculan los desplazamientos (César) y los reflejos (Atbash). Por defecto son los 95 caracteres imprimibles del código ASCII (del 32 al 126), en su propio orden. Puedes editarlo: añadir símbolos fuera de ASCII (ej. ñ, á, €) o reducirlo.</p>
@@ -203,13 +202,11 @@
     <div class="error" id="alphabetError"></div>
   </div>
 
-  <!-- TABS -->
   <div class="tabs">
     <button class="tab active" id="tabCifrarBtn" onclick="switchTab('cifrar')">Cifrar</button>
     <button class="tab" id="tabDescifrarBtn" onclick="switchTab('descifrar')">Descifrar</button>
   </div>
 
-  <!-- CIFRAR -->
   <div class="panel active" id="panelCifrar">
     <div class="card">
       <h2><span class="n">2</span> Cifrar un mensaje</h2>
@@ -252,7 +249,6 @@
     </div>
   </div>
 
-  <!-- DESCIFRAR -->
   <div class="panel" id="panelDescifrar">
     <div class="card">
       <h2><span class="n">3</span> Descifrar un mensaje (automático)</h2>
@@ -289,10 +285,6 @@
 </div>
 
 <script>
-/* ======================================================================
-   1. ALFABETO DE TRABAJO
-   ====================================================================== */
-
 function asciiPrintable(){
   let s = "";
   for (let c = 32; c <= 126; c++) s += String.fromCharCode(c);
@@ -334,13 +326,6 @@ function refreshAlphabetInfo(){
 document.getElementById('alphabetInput').addEventListener('input', refreshAlphabetInfo);
 resetAlphabetAscii();
 
-/* ======================================================================
-   2. PRIMITIVAS DE CIFRADO: CÉSAR Y ATBASH SOBRE UN ALFABETO ARBITRARIO
-   ====================================================================== */
-
-// Desplaza cada carácter presente en 'alphabet' por 'shift' posiciones
-// (mod N). Caracteres que no pertenecen al alfabeto se dejan intactos,
-// para no destruir separadores que el usuario decidió no incluir.
 function caesarTransform(text, alphabet, shift){
   const N = alphabet.length;
   if (N === 0) return text;
@@ -362,7 +347,6 @@ function caesarTransform(text, alphabet, shift){
 function caesarEncrypt(text, alphabet, shift){ return caesarTransform(text, alphabet, shift); }
 function caesarDecrypt(text, alphabet, shift){ return caesarTransform(text, alphabet, -shift); }
 
-// Atbash: refleja la posición dentro del alfabeto (N-1-i). Es su propia inversa.
 function atbash(text, alphabet){
   const N = alphabet.length;
   if (N === 0) return text;
@@ -379,28 +363,6 @@ function atbash(text, alphabet){
   return out;
 }
 
-/* ======================================================================
-   3. CRIPTOANÁLISIS AUTOMÁTICO (MÉTODO DE AL-KINDI: ANÁLISIS DE FRECUENCIAS)
-   ------------------------------------------------------------------------
-   Al-Kindi (Abu Yusuf Ya'qub ibn Ishaq al-Kindi, s. IX) fue el primero en
-   describir, en su "Risala fi Istikhraj al-Mu'amma" (Manuscrito sobre el
-   descifrado de mensajes criptográficos), que en un texto suficientemente
-   largo cada letra del idioma aparece con una frecuencia característica y
-   estable. Un cifrado por sustitución simple no destruye esa frecuencia:
-   solo la reetiqueta. Comparando la distribución de un texto candidato
-   contra la distribución esperada del idioma, se puede identificar la
-   clave correcta sin conocerla de antemano, y sin que una persona tenga
-   que "elegir a ojo" cuál candidato es el correcto.
-
-   Aquí se implementa esa idea con una prueba de bondad de ajuste χ²:
-   para cada candidato de descifrado se cuenta cuántas veces aparece cada
-   letra española y se compara contra el conteo esperado según la
-   frecuencia estándar del idioma. El candidato con menor χ² (más parecido
-   al español real) se declara ganador, de forma enteramente automática.
-   ====================================================================== */
-
-// Frecuencias relativas (%) de las letras en español (fuente: estudios de
-// frecuencia léxica del español; valores de referencia estándar).
 const SPANISH_FREQ = {
   a: 12.53, b: 1.42, c: 4.68, d: 5.86, e: 13.68, f: 0.69, g: 1.01, h: 0.70,
   i: 6.25, j: 0.44, k: 0.02, l: 4.97, m: 3.15, n: 6.71, "ñ": 0.31, o: 8.68,
@@ -409,26 +371,12 @@ const SPANISH_FREQ = {
 };
 
 const ACCENT_MAP = { á:'a', é:'e', í:'i', ó:'o', ú:'u', ü:'u',
-                      Á:'a', É:'e', Í:'i', Ó:'o', Ú:'u', Ü:'u' };
+                    Á:'a', É:'e', Í:'i', Ó:'o', Ú:'u', Ü:'u' };
 
-// --- Modelo de un texto "típico" en español, sobre TODOS sus caracteres ---
-// No basta con comparar solo las letras encontradas: cada candidato de
-// descifrado tiene una cantidad distinta de letras reconocibles (el resto
-// queda convertido en símbolos), así que un candidato incorrecto con muy
-// pocas letras --pero muchísimos símbolos raros-- podía obtener antes un
-// chi-cuadrado artificialmente bajo solo por tener pocos términos que sumar.
-// Para evitarlo, el "tamaño de muestra" de todos los candidatos es siempre
-// el mismo: la longitud completa del texto. Se reparte esa longitud en tres
-// categorías con una frecuencia esperada cada una: letras españolas, espacio
-// y "otros" (dígitos, puntuación, símbolos). Un candidato lleno de símbolos
-// raros queda fuertemente penalizado en la categoría "otros", sin importar
-// cuántas letras "de suerte" tenga.
-const SPACE_SHARE = 0.18;   // proporción típica de espacios en prosa en español
-const OTHER_SHARE = 0.02;   // proporción típica de dígitos/puntuación/símbolos
-const LETTER_SHARE = 1 - SPACE_SHARE - OTHER_SHARE; // resto: letras
+const SPACE_SHARE = 0.18;
+const OTHER_SHARE = 0.02;
+const LETTER_SHARE = 1 - SPACE_SHARE - OTHER_SHARE;
 
-// Frecuencia esperada de cada letra española como fracción del texto COMPLETO
-// (no solo de las letras), para que sea comparable entre candidatos.
 const EXPECTED_SHARE = {};
 for (const letter in SPANISH_FREQ){
   EXPECTED_SHARE[letter] = (SPANISH_FREQ[letter] / 100) * LETTER_SHARE;
@@ -438,10 +386,6 @@ function normalizeChar(ch){
   return ACCENT_MAP[ch] ? ACCENT_MAP[ch] : ch;
 }
 
-// Estadístico chi-cuadrado entre la distribución observada de TODO el texto
-// (letras + espacios + otros) y la esperada para español típico. Menor
-// valor = más parecido al español. El tamaño de muestra es fijo (longitud
-// del texto), igual para todos los candidatos, así que sí son comparables.
 function chiSquaredScore(text){
   const total = text.length;
   if (total === 0) return { score: Infinity, sample: 0 };
@@ -478,10 +422,6 @@ function chiSquaredScore(text){
   return { score: chi, sample: total };
 }
 
-// Prueba TODOS los desplazamientos César posibles (1..N-1) más Atbash sobre
-// el alfabeto activo, puntúa cada candidato y devuelve únicamente el mejor.
-// Esta es la función que garantiza que "no interviene el factor humano":
-// no hay menú para que el usuario escoja el método o la clave.
 function autoDecrypt(ciphertext, alphabet){
   const N = alphabet.length;
   if (N < 2) throw new Error("El alfabeto necesita al menos 2 caracteres.");
@@ -501,12 +441,8 @@ function autoDecrypt(ciphertext, alphabet){
   }
 
   candidates.sort((a, b) => a.score - b.score);
-  return candidates; // el primero (índice 0) es el ganador
+  return candidates;
 }
-
-/* ======================================================================
-   4. INTERFAZ
-   ====================================================================== */
 
 let encryptMethod = 'cesar';
 
@@ -613,8 +549,6 @@ function doAutoDecrypt(){
     shortTextWarning.classList.remove('show');
   }
 
-  // Panel de transparencia del análisis (no es un selector: solo explica
-  // por qué se eligió automáticamente ese candidato).
   const top5 = ranked.slice(0, 5).map((c, i) =>
     `<tr><td>${i+1}</td><td>${c.type}${c.shift !== null ? ' (k=' + c.shift + ')' : ''}</td><td>${c.score.toFixed(2)}</td><td>${c.sample}</td></tr>`
   ).join('');
@@ -632,9 +566,6 @@ function doAutoDecrypt(){
   `;
 }
 
-// Copia el texto cifrado y envía directo a la pestaña Descifrar, para
-// evitar que alguien tenga que teclearlo o copiarlo a mano (fuente común
-// de errores de transcripción, como caracteres repetidos de más o de menos).
 function copyEncryptResult(){
   const text = document.getElementById('encryptResult').textContent;
   navigator.clipboard.writeText(text).then(() => {
@@ -653,7 +584,6 @@ function sendToDecrypt(){
   switchTab('descifrar');
 }
 
-// Inicializa el estado del formulario de cifrado
 selectEncryptMethod('cesar');
 </script>
 </body>
