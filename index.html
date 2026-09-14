@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diwan al-Kindi · Cifrado César y Atbash</title>
+<meta name="description" content="Herramienta educativa de cifrado y descifrado César/Atbash con detección automática mediante análisis de frecuencias.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#151a24;
+    --panel:#1d2433;
+    --panel-2:#242c3d;
+    --parchment:#efe7d6;
+    --parchment-2:#e4d9c1;
+    --brass:#c3924a;
+    --brass-bright:#e0ac5c;
+    --oxblood:#8a3a34;
+    --oxblood-bright:#b04b42;
+    --text-light:#ece6d8;
+    --text-muted:#a9a290;
+    --text-dark:#221c14;
+    --ok:#5f8f6b;
+    --line: rgba(236,230,216,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 600px at 15% -10%, rgba(195,146,74,0.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(138,58,52,0.12), transparent 55%),
+      var(--ink);
+    color:var(--text-light);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .wrap{max-width:880px; margin:0 auto; padding:48px 24px 96px;}
+
+  header.hero{
+    display:flex; flex-direction:column; gap:10px;
+    padding-bottom:28px; margin-bottom:36px;
+    border-bottom:1px solid var(--line);
+  }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px; letter-spacing:.04em;
+    color:var(--brass-bright);
+  }
+  h1{
+    font-family:'Spectral', serif;
+    font-weight:600;
+    font-size:clamp(28px,4vw,40px);
+    margin:0;
+    color:var(--text-light);
+  }
+  h1 em{
+    font-style:italic; color:var(--brass-bright); font-weight:500;
+  }
+  .lede{
+    font-size:15.5px; color:var(--text-muted); max-width:60ch;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:26px 26px 28px;
+    margin-bottom:22px;
+  }
+  .card h2{
+    font-family:'Spectral', serif;
+    font-size:19px; font-weight:600; margin:0 0 4px;
+    display:flex; align-items:center; gap:10px;
+    color:var(--text-light);
+  }
+  .card h2 .n{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px; color:var(--ink); background:var(--brass);
+    width:22px; height:22px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .card .sub{ font-size:13.5px; color:var(--text-muted); margin:0 0 18px; }
+
+  label{ display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; }
+  textarea, input[type=text], input[type=number], select{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text-light);
+    border-radius:7px;
+    padding:11px 12px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    resize:vertical;
+  }
+  textarea:focus, input:focus, select:focus, button:focus-visible{
+    outline:2px solid var(--brass-bright); outline-offset:1px;
+  }
+  .row{ display:flex; gap:14px; flex-wrap:wrap; }
+  .row > div{ flex:1; min-width:180px; }
+  .field{ margin-bottom:16px; }
+  .hint{ font-size:12px; color:var(--text-muted); margin-top:6px; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:20px; }
+  .tab{
+    font-family:'Inter'; font-size:14px; font-weight:600;
+    padding:9px 18px; border-radius:7px; cursor:pointer;
+    background:transparent; border:1px solid var(--line); color:var(--text-muted);
+  }
+  .tab.active{ background:var(--brass); color:var(--text-dark); border-color:var(--brass); }
+  .panel{ display:none; }
+  .panel.active{ display:block; }
+
+  .method-choice{ display:flex; gap:10px; margin-bottom:16px; }
+  .method-btn{
+    flex:1; text-align:left; padding:12px 14px; border-radius:8px;
+    border:1px solid var(--line); background:var(--panel-2); cursor:pointer;
+    color:var(--text-light);
+  }
+  .method-btn strong{ display:block; font-family:'Spectral', serif; font-size:15px; }
+  .method-btn span{ font-size:12px; color:var(--text-muted); }
+  .method-btn.selected{ border-color:var(--brass); background:rgba(195,146,74,0.10); }
+
+  button.action{
+    font-family:'Inter'; font-weight:600; font-size:14.5px;
+    padding:12px 22px; border-radius:7px; border:none; cursor:pointer;
+    background:var(--oxblood); color:#f4ece6;
+  }
+  button.action:hover{ background:var(--oxblood-bright); }
+  button.ghost{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    background:transparent; border:1px solid var(--line); color:var(--text-muted);
+    padding:7px 12px; border-radius:6px; cursor:pointer;
+  }
+  button.ghost:hover{ border-color:var(--brass); color:var(--brass-bright); }
+
+  .output{
+    margin-top:18px; background:var(--parchment); color:var(--text-dark);
+    border-radius:8px; padding:18px 20px; display:none;
+    border:1px solid var(--parchment-2);
+  }
+  .output.show{ display:block; }
+  .output .label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.05em;
+    color:#7a6a4a; margin-bottom:6px;
+  }
+  .output .value{
+    font-family:'IBM Plex Mono', monospace; font-size:16px; word-break:break-word;
+    white-space:pre-wrap;
+  }
+  .seal{
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:'Inter'; font-size:12.5px; font-weight:600;
+    background:var(--ink); color:var(--brass-bright);
+    padding:5px 11px; border-radius:20px; margin-top:12px;
+  }
+  .seal .dot{ width:7px; height:7px; border-radius:50%; background:var(--brass-bright); }
+
+  .error{
+    margin-top:14px; background:rgba(138,58,52,0.18); border:1px solid rgba(176,75,66,0.4);
+    color:#f0c9c4; border-radius:7px; padding:10px 14px; font-size:13.5px; display:none;
+  }
+  .error.show{ display:block; }
+
+  details{ margin-top:6px; }
+  summary{ cursor:pointer; font-size:13px; color:var(--brass-bright); font-family:'Inter'; font-weight:600; }
+  details .details-body{
+    margin-top:12px; font-size:13.5px; color:var(--text-muted); line-height:1.65;
+  }
+  details table{ width:100%; border-collapse:collapse; margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:12px;}
+  details td, details th{ border:1px solid var(--line); padding:5px 8px; text-align:left;}
+
+  footer{
+    text-align:center; font-size:12px; color:var(--text-muted); margin-top:40px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="kicker">علم التعمية — CRIPTOGRAFÍA CLÁSICA</div>
+    <h1>Diwan al-Kindi <em>· César &amp; Atbash</em></h1>
+    <p class="lede">Cifra y descifra mensajes con los métodos César y Atbash sobre un alfabeto que tú defines. El descifrado no pide el método: lo determina solo, mediante análisis de frecuencias — la técnica descrita por primera vez por al-Kindi en el siglo IX.</p>
+  </header>
+
+  <!-- CONFIGURACIÓN DE ALFABETO -->
+  <div class="card">
+    <h2><span class="n">1</span> Conjunto de caracteres (alfabeto de trabajo)</h2>
+    <p class="sub">Este es el conjunto ordenado sobre el que se calculan los desplazamientos (César) y los reflejos (Atbash). Por defecto son los 95 caracteres imprimibles del código ASCII (del 32 al 126), en su propio orden. Puedes editarlo: añadir símbolos fuera de ASCII (ej. ñ, á, €) o reducirlo.</p>
+    <div class="field">
+      <label for="alphabetInput">Alfabeto (el orden importa)</label>
+      <textarea id="alphabetInput" rows="3"></textarea>
+      <div class="hint" id="alphabetInfo"></div>
+    </div>
+    <div class="row">
+      <button class="ghost" onclick="resetAlphabetAscii()">Restaurar ASCII 32–126</button>
+      <button class="ghost" onclick="resetAlphabetEs()">Usar alfabeto español (a–z, ñ, mayúsculas, espacio)</button>
+    </div>
+    <div class="error" id="alphabetError"></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" id="tabCifrarBtn" onclick="switchTab('cifrar')">Cifrar</button>
+    <button class="tab" id="tabDescifrarBtn" onclick="switchTab('descifrar')">Descifrar</button>
+  </div>
+
+  <!-- CIFRAR -->
+  <div class="panel active" id="panelCifrar">
+    <div class="card">
+      <h2><span class="n">2</span> Cifrar un mensaje</h2>
+      <p class="sub">Elige el módulo de cifrado. Para César, indica el desplazamiento (el "módulo" k).</p>
+
+      <div class="method-choice">
+        <div class="method-btn selected" id="btnMethodCesar" onclick="selectEncryptMethod('cesar')">
+          <strong>César</strong>
+          <span>Desplazamiento cíclico de k posiciones dentro del alfabeto</span>
+        </div>
+        <div class="method-btn" id="btnMethodAtbash" onclick="selectEncryptMethod('atbash')">
+          <strong>Atbash</strong>
+          <span>Reflejo: primer carácter ↔ último, segundo ↔ penúltimo…</span>
+        </div>
+      </div>
+
+      <div class="field" id="shiftField">
+        <label for="shiftInput">Desplazamiento (módulo k)</label>
+        <input type="number" id="shiftInput" value="3" min="1">
+        <div class="hint" id="shiftHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="plainInput">Mensaje a cifrar</label>
+        <textarea id="plainInput" rows="3" placeholder="Escribe aquí tu mensaje...">El conocimiento es poder</textarea>
+      </div>
+
+      <button class="action" onclick="doEncrypt()">Cifrar mensaje</button>
+      <div class="error" id="encryptError"></div>
+
+      <div class="output" id="encryptOutput">
+        <div class="label">TEXTO CIFRADO</div>
+        <div class="value" id="encryptResult"></div>
+        <div class="seal"><span class="dot"></span><span id="encryptSeal"></span></div>
+        <div class="row" style="margin-top:14px;">
+          <button class="ghost" onclick="copyEncryptResult()" id="copyBtn">Copiar texto cifrado</button>
+          <button class="ghost" onclick="sendToDecrypt()">Enviar a Descifrar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DESCIFRAR -->
+  <div class="panel" id="panelDescifrar">
+    <div class="card">
+      <h2><span class="n">3</span> Descifrar un mensaje (automático)</h2>
+      <p class="sub">No se selecciona el método. El sistema prueba todos los desplazamientos César posibles y el Atbash sobre el alfabeto configurado, mide qué candidato se parece más al español mediante la prueba χ² de frecuencias, y muestra <strong>solo</strong> la línea correcta.</p>
+
+      <div class="field">
+        <label for="cipherInput">Mensaje cifrado</label>
+        <textarea id="cipherInput" rows="3" placeholder="Pega aquí el texto cifrado..."></textarea>
+      </div>
+
+      <button class="action" onclick="doAutoDecrypt()">Descifrar automáticamente</button>
+      <div class="error" id="decryptError"></div>
+
+      <div class="output" id="decryptOutput">
+        <div class="label">TEXTO DESCIFRADO</div>
+        <div class="value" id="decryptResult"></div>
+        <div class="seal"><span class="dot"></span><span id="decryptSeal"></span></div>
+      </div>
+      <div class="error" id="shortTextWarning" style="background:rgba(195,146,74,0.14); border-color:rgba(195,146,74,0.4); color:#f0dcb8;"></div>
+
+      <details>
+        <summary>Ver cómo decidió el sistema (análisis de al-Kindi)</summary>
+        <div class="details-body" id="analysisDetails">
+          Aún no se ha ejecutado ningún descifrado.
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <footer>
+    Herramienta educativa · Los cifrados César y Atbash son sustituciones simples,
+    vulnerables al análisis de frecuencias desde el siglo IX. No usar para proteger información real.
+  </footer>
+</div>
+
+<script>
+/* ======================================================================
+   1. ALFABETO DE TRABAJO
+   ====================================================================== */
+
+function asciiPrintable(){
+  let s = "";
+  for (let c = 32; c <= 126; c++) s += String.fromCharCode(c);
+  return s;
+}
+
+function dedupePreserveOrder(str){
+  const seen = new Set();
+  let out = "";
+  for (const ch of str){
+    if (!seen.has(ch)){ seen.add(ch); out += ch; }
+  }
+  return out;
+}
+
+function getAlphabet(){
+  return dedupePreserveOrder(document.getElementById('alphabetInput').value);
+}
+
+function resetAlphabetAscii(){
+  document.getElementById('alphabetInput').value = asciiPrintable();
+  refreshAlphabetInfo();
+}
+
+function resetAlphabetEs(){
+  const es = "abcdefghijklmnñopqrstuvwxyzABCDEFGHIJKLMNÑOPQRSTUVWXYZ ";
+  document.getElementById('alphabetInput').value = es;
+  refreshAlphabetInfo();
+}
+
+function refreshAlphabetInfo(){
+  const a = getAlphabet();
+  document.getElementById('alphabetInfo').textContent =
+    `${a.length} caracteres únicos configurados. Los desplazamientos César válidos van de 1 a ${Math.max(a.length-1,0)}.`;
+  document.getElementById('shiftHint').textContent =
+    `Debe ser un entero entre 1 y ${Math.max(a.length-1,1)} (equivalente al residuo mod ${a.length}).`;
+}
+
+document.getElementById('alphabetInput').addEventListener('input', refreshAlphabetInfo);
+resetAlphabetAscii();
+
+/* ======================================================================
+   2. PRIMITIVAS DE CIFRADO: CÉSAR Y ATBASH SOBRE UN ALFABETO ARBITRARIO
+   ====================================================================== */
+
+// Desplaza cada carácter presente en 'alphabet' por 'shift' posiciones
+// (mod N). Caracteres que no pertenecen al alfabeto se dejan intactos,
+// para no destruir separadores que el usuario decidió no incluir.
+function caesarTransform(text, alphabet, shift){
+  const N = alphabet.length;
+  if (N === 0) return text;
+  const index = new Map();
+  for (let i = 0; i < N; i++) index.set(alphabet[i], i);
+  const mod = ((shift % N) + N) % N;
+  let out = "";
+  for (const ch of text){
+    if (index.has(ch)){
+      const newIdx = (index.get(ch) + mod) % N;
+      out += alphabet[newIdx];
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function caesarEncrypt(text, alphabet, shift){ return caesarTransform(text, alphabet, shift); }
+function caesarDecrypt(text, alphabet, shift){ return caesarTransform(text, alphabet, -shift); }
+
+// Atbash: refleja la posición dentro del alfabeto (N-1-i). Es su propia inversa.
+function atbash(text, alphabet){
+  const N = alphabet.length;
+  if (N === 0) return text;
+  const index = new Map();
+  for (let i = 0; i < N; i++) index.set(alphabet[i], i);
+  let out = "";
+  for (const ch of text){
+    if (index.has(ch)){
+      out += alphabet[N - 1 - index.get(ch)];
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+/* ======================================================================
+   3. CRIPTOANÁLISIS AUTOMÁTICO (MÉTODO DE AL-KINDI: ANÁLISIS DE FRECUENCIAS)
+   ------------------------------------------------------------------------
+   Al-Kindi (Abu Yusuf Ya'qub ibn Ishaq al-Kindi, s. IX) fue el primero en
+   describir, en su "Risala fi Istikhraj al-Mu'amma" (Manuscrito sobre el
+   descifrado de mensajes criptográficos), que en un texto suficientemente
+   largo cada letra del idioma aparece con una frecuencia característica y
+   estable. Un cifrado por sustitución simple no destruye esa frecuencia:
+   solo la reetiqueta. Comparando la distribución de un texto candidato
+   contra la distribución esperada del idioma, se puede identificar la
+   clave correcta sin conocerla de antemano, y sin que una persona tenga
+   que "elegir a ojo" cuál candidato es el correcto.
+
+   Aquí se implementa esa idea con una prueba de bondad de ajuste χ²:
+   para cada candidato de descifrado se cuenta cuántas veces aparece cada
+   letra española y se compara contra el conteo esperado según la
+   frecuencia estándar del idioma. El candidato con menor χ² (más parecido
+   al español real) se declara ganador, de forma enteramente automática.
+   ====================================================================== */
+
+// Frecuencias relativas (%) de las letras en español (fuente: estudios de
+// frecuencia léxica del español; valores de referencia estándar).
+const SPANISH_FREQ = {
+  a: 12.53, b: 1.42, c: 4.68, d: 5.86, e: 13.68, f: 0.69, g: 1.01, h: 0.70,
+  i: 6.25, j: 0.44, k: 0.02, l: 4.97, m: 3.15, n: 6.71, "ñ": 0.31, o: 8.68,
+  p: 2.51, q: 0.88, r: 6.87, s: 7.98, t: 4.63, u: 3.93, v: 0.90, w: 0.02,
+  x: 0.22, y: 0.90, z: 0.52
+};
+
+const ACCENT_MAP = { á:'a', é:'e', í:'i', ó:'o', ú:'u', ü:'u',
+                      Á:'a', É:'e', Í:'i', Ó:'o', Ú:'u', Ü:'u' };
+
+// --- Modelo de un texto "típico" en español, sobre TODOS sus caracteres ---
+// No basta con comparar solo las letras encontradas: cada candidato de
+// descifrado tiene una cantidad distinta de letras reconocibles (el resto
+// queda convertido en símbolos), así que un candidato incorrecto con muy
+// pocas letras --pero muchísimos símbolos raros-- podía obtener antes un
+// chi-cuadrado artificialmente bajo solo por tener pocos términos que sumar.
+// Para evitarlo, el "tamaño de muestra" de todos los candidatos es siempre
+// el mismo: la longitud completa del texto. Se reparte esa longitud en tres
+// categorías con una frecuencia esperada cada una: letras españolas, espacio
+// y "otros" (dígitos, puntuación, símbolos). Un candidato lleno de símbolos
+// raros queda fuertemente penalizado en la categoría "otros", sin importar
+// cuántas letras "de suerte" tenga.
+const SPACE_SHARE = 0.18;   // proporción típica de espacios en prosa en español
+const OTHER_SHARE = 0.02;   // proporción típica de dígitos/puntuación/símbolos
+const LETTER_SHARE = 1 - SPACE_SHARE - OTHER_SHARE; // resto: letras
+
+// Frecuencia esperada de cada letra española como fracción del texto COMPLETO
+// (no solo de las letras), para que sea comparable entre candidatos.
+const EXPECTED_SHARE = {};
+for (const letter in SPANISH_FREQ){
+  EXPECTED_SHARE[letter] = (SPANISH_FREQ[letter] / 100) * LETTER_SHARE;
+}
+
+function normalizeChar(ch){
+  return ACCENT_MAP[ch] ? ACCENT_MAP[ch] : ch;
+}
+
+// Estadístico chi-cuadrado entre la distribución observada de TODO el texto
+// (letras + espacios + otros) y la esperada para español típico. Menor
+// valor = más parecido al español. El tamaño de muestra es fijo (longitud
+// del texto), igual para todos los candidatos, así que sí son comparables.
+function chiSquaredScore(text){
+  const total = text.length;
+  if (total === 0) return { score: Infinity, sample: 0 };
+
+  const letterCounts = {};
+  let spaceCount = 0;
+  let letterTotal = 0;
+
+  for (const raw of text){
+    if (raw === ' '){
+      spaceCount++;
+      continue;
+    }
+    const lower = normalizeChar(raw).toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(SPANISH_FREQ, lower)){
+      letterCounts[lower] = (letterCounts[lower] || 0) + 1;
+      letterTotal++;
+    }
+  }
+  const otherCount = total - letterTotal - spaceCount;
+
+  let chi = 0;
+  for (const letter in EXPECTED_SHARE){
+    const expected = total * EXPECTED_SHARE[letter];
+    const observed = letterCounts[letter] || 0;
+    if (expected > 0) chi += Math.pow(observed - expected, 2) / expected;
+  }
+  const expectedSpace = total * SPACE_SHARE;
+  if (expectedSpace > 0) chi += Math.pow(spaceCount - expectedSpace, 2) / expectedSpace;
+
+  const expectedOther = total * OTHER_SHARE;
+  if (expectedOther > 0) chi += Math.pow(otherCount - expectedOther, 2) / expectedOther;
+
+  return { score: chi, sample: total };
+}
+
+// Prueba TODOS los desplazamientos César posibles (1..N-1) más Atbash sobre
+// el alfabeto activo, puntúa cada candidato y devuelve únicamente el mejor.
+// Esta es la función que garantiza que "no interviene el factor humano":
+// no hay menú para que el usuario escoja el método o la clave.
+function autoDecrypt(ciphertext, alphabet){
+  const N = alphabet.length;
+  if (N < 2) throw new Error("El alfabeto necesita al menos 2 caracteres.");
+
+  const candidates = [];
+
+  for (let shift = 1; shift < N; shift++){
+    const plain = caesarDecrypt(ciphertext, alphabet, shift);
+    const { score, sample } = chiSquaredScore(plain);
+    candidates.push({ type: "César", shift, plain, score, sample });
+  }
+
+  {
+    const plain = atbash(ciphertext, alphabet);
+    const { score, sample } = chiSquaredScore(plain);
+    candidates.push({ type: "Atbash", shift: null, plain, score, sample });
+  }
+
+  candidates.sort((a, b) => a.score - b.score);
+  return candidates; // el primero (índice 0) es el ganador
+}
+
+/* ======================================================================
+   4. INTERFAZ
+   ====================================================================== */
+
+let encryptMethod = 'cesar';
+
+function switchTab(name){
+  document.getElementById('panelCifrar').classList.toggle('active', name === 'cifrar');
+  document.getElementById('panelDescifrar').classList.toggle('active', name === 'descifrar');
+  document.getElementById('tabCifrarBtn').classList.toggle('active', name === 'cifrar');
+  document.getElementById('tabDescifrarBtn').classList.toggle('active', name === 'descifrar');
+}
+
+function selectEncryptMethod(method){
+  encryptMethod = method;
+  document.getElementById('btnMethodCesar').classList.toggle('selected', method === 'cesar');
+  document.getElementById('btnMethodAtbash').classList.toggle('selected', method === 'atbash');
+  document.getElementById('shiftField').style.display = (method === 'cesar') ? 'block' : 'none';
+}
+
+function showError(id, msg){
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('show');
+}
+function hideError(id){
+  document.getElementById(id).classList.remove('show');
+}
+
+function doEncrypt(){
+  hideError('encryptError');
+  document.getElementById('encryptOutput').classList.remove('show');
+
+  const alphabet = getAlphabet();
+  const text = document.getElementById('plainInput').value;
+
+  if (alphabet.length < 2){
+    showError('encryptError', 'El alfabeto debe tener al menos 2 caracteres distintos.');
+    return;
+  }
+  if (!text){
+    showError('encryptError', 'Escribe un mensaje para cifrar.');
+    return;
+  }
+
+  let result, sealText;
+  if (encryptMethod === 'cesar'){
+    const shift = parseInt(document.getElementById('shiftInput').value, 10);
+    if (!Number.isInteger(shift) || shift < 1 || shift > alphabet.length - 1){
+      showError('encryptError', `El desplazamiento debe ser un entero entre 1 y ${alphabet.length - 1}.`);
+      return;
+    }
+    result = caesarEncrypt(text, alphabet, shift);
+    sealText = `Módulo: César · desplazamiento = ${shift} (mod ${alphabet.length})`;
+  } else {
+    result = atbash(text, alphabet);
+    sealText = `Módulo: Atbash · alfabeto de ${alphabet.length} caracteres`;
+  }
+
+  document.getElementById('encryptResult').textContent = result;
+  document.getElementById('encryptSeal').textContent = sealText;
+  document.getElementById('encryptOutput').classList.add('show');
+}
+
+function doAutoDecrypt(){
+  hideError('decryptError');
+  document.getElementById('decryptOutput').classList.remove('show');
+
+  const alphabet = getAlphabet();
+  const cipher = document.getElementById('cipherInput').value;
+
+  if (alphabet.length < 2){
+    showError('decryptError', 'El alfabeto debe tener al menos 2 caracteres distintos.');
+    return;
+  }
+  if (!cipher){
+    showError('decryptError', 'Pega un mensaje cifrado.');
+    return;
+  }
+
+  let ranked;
+  try{
+    ranked = autoDecrypt(cipher, alphabet);
+  } catch(e){
+    showError('decryptError', e.message);
+    return;
+  }
+
+  const winner = ranked[0];
+
+  if (!isFinite(winner.score) || cipher.length === 0){
+    showError('decryptError', 'No se pudo identificar el cifrado automáticamente. Verifica que el alfabeto configurado sea el mismo que se usó para cifrar, y que el texto cifrado no tenga caracteres de más o de menos (cópialo y pégalo en vez de teclearlo).');
+    return;
+  }
+
+  document.getElementById('decryptResult').textContent = winner.plain;
+  document.getElementById('decryptSeal').textContent = winner.type === 'César'
+    ? `Detectado: César · desplazamiento = ${winner.shift} (mod ${alphabet.length})`
+    : `Detectado: Atbash`;
+  document.getElementById('decryptOutput').classList.add('show');
+
+  const shortTextWarning = document.getElementById('shortTextWarning');
+  if (cipher.length < 10){
+    shortTextWarning.textContent = 'Este texto es muy corto para un análisis de frecuencias totalmente fiable (al-Kindi ya señalaba que se necesita texto suficientemente largo). Con menos de ~10 caracteres, el resultado puede no ser el correcto. Prueba con una oración más larga si el resultado no coincide con lo esperado.';
+    shortTextWarning.classList.add('show');
+  } else {
+    shortTextWarning.classList.remove('show');
+  }
+
+  // Panel de transparencia del análisis (no es un selector: solo explica
+  // por qué se eligió automáticamente ese candidato).
+  const top5 = ranked.slice(0, 5).map((c, i) =>
+    `<tr><td>${i+1}</td><td>${c.type}${c.shift !== null ? ' (k=' + c.shift + ')' : ''}</td><td>${c.score.toFixed(2)}</td><td>${c.sample}</td></tr>`
+  ).join('');
+
+  document.getElementById('analysisDetails').innerHTML = `
+    Se generaron ${ranked.length} candidatos (uno por cada desplazamiento César de 1 a ${alphabet.length - 1}, más Atbash).
+    Cada candidato se comparó contra un modelo de español típico (letras + espacios + otros símbolos, en las proporciones
+    en que aparecen normalmente en un texto) usando la prueba χ² de bondad de ajuste, sobre el texto completo del
+    candidato. Menor χ² indica mayor parecido con el español natural. El candidato ganador tuvo χ² = ${winner.score.toFixed(2)}
+    sobre ${winner.sample} caracteres.
+    <table>
+      <tr><th>#</th><th>Candidato</th><th>χ² (menor = mejor)</th><th>Caracteres analizados</th></tr>
+      ${top5}
+    </table>
+  `;
+}
+
+// Copia el texto cifrado y envía directo a la pestaña Descifrar, para
+// evitar que alguien tenga que teclearlo o copiarlo a mano (fuente común
+// de errores de transcripción, como caracteres repetidos de más o de menos).
+function copyEncryptResult(){
+  const text = document.getElementById('encryptResult').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    const original = btn.textContent;
+    btn.textContent = '¡Copiado!';
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  }).catch(() => {
+    showError('encryptError', 'No se pudo copiar automáticamente; selecciona y copia el texto manualmente.');
+  });
+}
+
+function sendToDecrypt(){
+  const text = document.getElementById('encryptResult').textContent;
+  document.getElementById('cipherInput').value = text;
+  switchTab('descifrar');
+}
+
+// Inicializa el estado del formulario de cifrado
+selectEncryptMethod('cesar');
+</script>
+</body>
+</html>

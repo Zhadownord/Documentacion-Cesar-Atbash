@@ -1,0 +1,9 @@
+{
+  "name": "diwan-al-kindi-cifrado",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Cifrado y descifrado automatico Cesar/Atbash con documentacion protegida por contraseña (Vercel serverless).",
+  "engines": {
+    "node": ">=18"
+  }
+}

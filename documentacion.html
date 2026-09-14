@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentación técnica · Diwan al-Kindi</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#151a24; --panel:#1d2433; --panel-2:#242c3d;
+    --brass:#c3924a; --brass-bright:#e0ac5c;
+    --oxblood:#8a3a34; --oxblood-bright:#b04b42;
+    --text-light:#ece6d8; --text-muted:#a9a290;
+    --line: rgba(236,230,216,0.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(1100px 600px at 15% -10%, rgba(195,146,74,0.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(138,58,52,0.12), transparent 55%),
+      var(--ink);
+    color:var(--text-light);
+    font-family:'Inter', sans-serif;
+    padding:24px;
+  }
+  .gate{
+    max-width:420px; width:100%;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:36px 32px;
+  }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.05em;
+    color:var(--brass-bright); margin-bottom:10px;
+  }
+  h1{
+    font-family:'Spectral', serif; font-weight:600; font-size:24px;
+    margin:0 0 8px;
+  }
+  h1 em{ font-style:italic; color:var(--brass-bright); font-weight:500; }
+  p.lede{ font-size:14px; color:var(--text-muted); margin:0 0 26px; line-height:1.6; }
+
+  label{ display:block; font-size:13px; color:var(--text-muted); margin-bottom:6px; }
+  input[type=password]{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text-light);
+    border-radius:7px;
+    padding:12px 14px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    margin-bottom:16px;
+  }
+  input[type=password]:focus{ outline:2px solid var(--brass-bright); outline-offset:1px; }
+
+  button.action{
+    width:100%;
+    font-family:'Inter'; font-weight:600; font-size:15px;
+    padding:13px 22px; border-radius:7px; border:none; cursor:pointer;
+    background:var(--oxblood); color:#f4ece6;
+  }
+  button.action:hover{ background:var(--oxblood-bright); }
+  button.action:disabled{ opacity:0.6; cursor:progress; }
+
+  .error{
+    margin-top:14px; background:rgba(138,58,52,0.18); border:1px solid rgba(176,75,66,0.4);
+    color:#f0c9c4; border-radius:7px; padding:10px 14px; font-size:13.5px; display:none;
+  }
+  .error.show{ display:block; }
+
+  .back{
+    display:block; text-align:center; margin-top:20px;
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px;
+    color:var(--text-muted); text-decoration:none;
+  }
+  .back:hover{ color:var(--brass-bright); }
+</style>
+</head>
+<body>
+  <div class="gate">
+    <div class="kicker">علم التعمية — ACCESO RESTRINGIDO</div>
+    <h1>Diwan al-Kindi <em>· Documentación</em></h1>
+    <p class="lede">
+      La documentación técnica completa del programa está protegida.
+      La contraseña se verifica en el servidor: si es incorrecta, el
+      contenido nunca llega a este navegador.
+    </p>
+
+    <form id="gateForm" autocomplete="off">
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" name="password" placeholder="••••••••" required autofocus>
+      <button type="submit" class="action" id="submitBtn">Ver documentación</button>
+    </form>
+
+    <div class="error" id="gateError"></div>
+    <a href="index.html" class="back">← Volver al programa</a>
+  </div>
+
+<script>
+document.getElementById('gateForm').addEventListener('submit', async function(e){
+  e.preventDefault();
+
+  const password = document.getElementById('password').value;
+  const btn = document.getElementById('submitBtn');
+  const errorBox = document.getElementById('gateError');
+  errorBox.classList.remove('show');
+
+  btn.disabled = true;
+  btn.textContent = 'Verificando...';
+
+  try {
+    const res = await fetch('/api/get-doc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorBox.textContent = data.error || 'No se pudo verificar la contraseña.';
+      errorBox.classList.add('show');
+      btn.disabled = false;
+      btn.textContent = 'Ver documentación';
+      return;
+    }
+
+    // Contraseña correcta: el servidor devolvió el HTML completo de la
+    // documentación. Se reemplaza todo el documento actual por ese HTML
+    // (incluye sus propios <script>, que sí se ejecutan con este método).
+    document.open();
+    document.write(data.html);
+    document.close();
+
+  } catch (err) {
+    errorBox.textContent = 'Error de conexión. Intenta de nuevo.';
+    errorBox.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Ver documentación';
+  }
+});
+</script>
+</body>
+</html>
